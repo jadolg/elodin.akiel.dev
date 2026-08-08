@@ -43,6 +43,7 @@ elodin_blocklists:
     format: hosts
 
 elodin_dnssec_enabled: true
+elodin_doh_enabled: true
 elodin_log_level: info
 
 lego_version: "5.3.1"
