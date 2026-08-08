@@ -1,0 +1,37 @@
+#!/usr/sbin/nft -f
+# Managed by Ansible (roles/firewall) - do not edit by hand.
+#
+# Steady state: only SSH and DNS-over-TLS (853) are reachable from the
+# internet. Plain DNS (53) is bound to 0.0.0.0 by elodin but only usable
+# locally because this ruleset drops it from anywhere else - elodin's own
+# server.allow_from is deliberately public (see roles/elodin), so this is
+# the actual boundary, not that setting. Port 80 does not appear here at
+# all: roles/lego opens it for a few seconds at a time, only while Lego is
+# proving an HTTP-01 challenge, and always closes it again afterwards.
+
+flush ruleset
+
+table inet filter {
+    chain input {
+        type filter hook input priority filter; policy drop;
+
+        iif "lo" accept
+        ct state established,related accept
+        ct state invalid drop
+
+        icmp type { echo-request, destination-unreachable, time-exceeded, parameter-problem } accept
+        icmpv6 type { echo-request, echo-reply, destination-unreachable, packet-too-big, time-exceeded, parameter-problem, nd-router-solicit, nd-router-advert, nd-neighbor-solicit, nd-neighbor-advert } accept
+
+        tcp dport {{ elodin_ssh_port }} accept comment "ssh management"
+
+        tcp dport 853 accept comment "DNS-over-TLS (public)"
+    }
+
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+    }
+
+    chain output {
+        type filter hook output priority filter; policy accept;
+    }
+}

@@ -1,0 +1,10 @@
+[Unit]
+Description=Watch elodin's DoT certificate for changes from Lego
+
+[Path]
+PathModified={{ elodin_cert_dir }}/{{ elodin_domain }}.crt
+PathModified={{ elodin_cert_dir }}/{{ elodin_domain }}.key
+Unit=elodin-cert-reload.service
+
+[Install]
+WantedBy=multi-user.target

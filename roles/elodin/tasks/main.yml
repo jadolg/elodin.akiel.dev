@@ -1,0 +1,65 @@
+---
+- name: Preseed the systemd-resolved takeover question (unattended install)
+  ansible.builtin.debconf:
+    name: elodin
+    question: elodin/takeover-dns
+    value: "true"
+    vtype: boolean
+
+- name: Add Akiel's apt repository
+  ansible.builtin.deb822_repository:
+    name: akiel
+    types: deb
+    uris: "https://deb.akiel.dev/"
+    suites: all
+    components: main
+    signed_by: "{{ elodin_apt_gpg_key_url }}"
+    install_python_debian: true
+
+- name: Install elodin
+  ansible.builtin.apt:
+    name: elodin
+    state: present
+    update_cache: true
+
+- name: Deploy elodin's configuration
+  ansible.builtin.template:
+    src: elodin.yaml.j2
+    dest: "{{ elodin_config_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+    validate: /usr/bin/elodin --config %s --check
+  register: elodin_config
+
+- name: Create elodin's systemd drop-in directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/elodin.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Let elodin read the DoT certificate via a dedicated group
+  ansible.builtin.template:
+    src: elodin.service.d-override.conf.j2
+    dest: /etc/systemd/system/elodin.service.d/override.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Flush handlers so systemd sees the override before elodin (re)starts
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start elodin
+  ansible.builtin.systemd:
+    name: elodin
+    enabled: true
+    state: started
+
+- name: Restart elodin if its configuration changed
+  ansible.builtin.systemd:
+    name: elodin
+    state: restarted
+  when: elodin_config is changed

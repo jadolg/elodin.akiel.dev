@@ -1,0 +1,4 @@
+[Service]
+# Grants read access to {{ elodin_cert_dir }}, without which the DoT
+# listener can't read its own certificate/key (see roles/lego).
+SupplementaryGroups={{ lego_cert_group }}

@@ -1,0 +1,22 @@
+#!/bin/sh
+# Managed by Ansible (roles/lego) - do not edit by hand.
+set -eu
+
+comment="acme-http01-temp"
+
+case "${1:-}" in
+  open)
+    nft add rule inet filter input tcp dport 80 accept comment \"$comment\"
+    ;;
+  close)
+    handle=$(nft -a list chain inet filter input 2>/dev/null \
+      | awk -v c="$comment" 'index($0, c) {print $NF}')
+    if [ -n "$handle" ]; then
+      nft delete rule inet filter input handle "$handle"
+    fi
+    ;;
+  *)
+    echo "usage: $0 {open|close}" >&2
+    exit 1
+    ;;
+esac

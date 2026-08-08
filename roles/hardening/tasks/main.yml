@@ -1,0 +1,38 @@
+---
+- name: Remove any stale 99-hardening.conf from before the ordering fix
+  ansible.builtin.file:
+    path: /etc/ssh/sshd_config.d/99-hardening.conf
+    state: absent
+  notify: Reload sshd
+
+# sshd_config.d/*.conf is Included near the top of sshd_config, and sshd
+# keeps the first value it sees for each directive - so this has to sort
+# before cloud-init's own 50-cloud-init.conf (which sets
+# "PasswordAuthentication yes" on every boot) to actually win, not after
+# it as a "99-" name would.
+- name: Deploy the sshd hardening drop-in
+  ansible.builtin.template:
+    src: sshd-hardening.conf.j2
+    dest: /etc/ssh/sshd_config.d/10-hardening.conf
+    owner: root
+    group: root
+    mode: "0644"
+    validate: "sshd -t -f %s"
+  notify: Reload sshd
+
+# Belt and suspenders beyond the per-fragment validate above: this checks
+# the whole merged configuration (main sshd_config plus every
+# sshd_config.d/*.conf, this one included) the way sshd actually reads it.
+# A failure here stops the play before the queued reload handler ever runs.
+- name: Verify the full sshd configuration is still valid
+  ansible.builtin.command: sshd -t
+  changed_when: false
+
+- name: Deploy the sysctl hardening drop-in
+  ansible.builtin.template:
+    src: sysctl-hardening.conf.j2
+    dest: /etc/sysctl.d/99-hardening.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Apply sysctl settings

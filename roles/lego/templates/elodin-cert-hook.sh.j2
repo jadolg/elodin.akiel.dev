@@ -1,0 +1,19 @@
+#!/bin/sh
+# Managed by Ansible (roles/lego) - do not edit by hand.
+#
+# Run by lego itself (--deploy-hook), only when it has just written a new
+# or renewed certificate - not on a run that decided nothing was due - both
+# from lego-renew.service and from the same "lego run" Ansible invokes.
+# Runs as the unprivileged "lego" user, which owns the files it just wrote:
+# {{ lego_home }} is
+# setgid to {{ lego_cert_group }}, so lego's own certificates/ subdirectory
+# and everything lego creates in it already belong to that group, and a
+# file's owner may chgrp/chmod its own files without extra privilege - so
+# this needs no elevation to hand elodin read access to the key.
+set -eu
+
+cert_dir="{{ elodin_cert_dir }}"
+
+chmod 0750 "$cert_dir"
+chmod 0640 "$cert_dir/{{ elodin_domain }}.key"
+chmod 0644 "$cert_dir/{{ elodin_domain }}.crt"

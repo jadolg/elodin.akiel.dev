@@ -1,0 +1,58 @@
+---
+elodin_domain: elodin.akiel.dev
+elodin_acme_email: diazorozcoj@gmail.com
+elodin_ssh_port: 22
+
+elodin_apt_gpg_key_url: "https://deb.akiel.dev/gpg.pub.key"
+
+elodin_upstream_servers:
+  - name: cloudflare-dot
+    type: tls
+    address: 1.1.1.1
+    port: 853
+    hostname: cloudflare-dns.com
+  - name: quad9-dot
+    type: tls
+    address: 9.9.9.9
+    port: 853
+    hostname: dns.quad9.net
+
+elodin_upstream_bootstrap:
+  - 1.1.1.1
+  - 9.9.9.9
+
+elodin_blocking_enabled: true
+elodin_blocklists:
+  - name: steven-black
+    url: https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts
+    format: hosts
+  - name: adguard-dns
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt
+    format: adblock
+  - name: hagezi-pro
+    url: https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/pro.txt
+    format: adblock
+  - name: oisd-big
+    url: https://big.oisd.nl
+    format: adblock
+  - name: urlhaus
+    url: https://urlhaus.abuse.ch/downloads/hostfile/
+    format: hosts
+  - name: 1hosts-lite
+    url: https://raw.githubusercontent.com/badmojr/1Hosts/master/Lite/hosts.txt
+    format: hosts
+
+elodin_dnssec_enabled: true
+elodin_log_level: info
+
+lego_version: "5.3.1"
+lego_checksum_linux_amd64: "sha256:b3c71b122ee1947eacfe0b809b955647f6377239fe4bfc49f73b1a091ae1252a"
+lego_renew_days: 30
+lego_bin_dir: /usr/local/bin
+lego_home: /etc/lego
+lego_user: lego
+lego_group: lego
+lego_cert_group: elodin-cert
+
+elodin_cert_dir: "{{ lego_home }}/certificates"
+elodin_config_path: /etc/elodin/elodin.yaml

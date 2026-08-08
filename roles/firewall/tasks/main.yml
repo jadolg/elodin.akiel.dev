@@ -1,0 +1,33 @@
+---
+- name: Install nftables
+  ansible.builtin.apt:
+    name: nftables
+    state: present
+    update_cache: true
+
+- name: Disable ufw (it would otherwise fight nftables for the same rules)
+  ansible.builtin.systemd:
+    name: ufw
+    state: stopped
+    enabled: false
+  failed_when: false
+
+- name: Deploy the base nftables ruleset
+  ansible.builtin.template:
+    src: nftables.conf.j2
+    dest: /etc/nftables.conf
+    owner: root
+    group: root
+    mode: "0640"
+
+- name: Enable nftables at boot
+  ansible.builtin.systemd:
+    name: nftables
+    enabled: true
+
+# Applied unconditionally (not just on change) rather than left to a handler:
+# roles/lego runs right after this one and needs the "inet filter input"
+# chain to already exist so it can add its own temporary :80 rule into it.
+- name: Apply the ruleset now
+  ansible.builtin.command: nft -f /etc/nftables.conf
+  changed_when: true

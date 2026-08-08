@@ -1,0 +1,14 @@
+# Managed by Ansible (roles/hardening) - do not edit by hand.
+#
+# Every connection to this host, root included, already authenticates by
+# key (verified before this was written: root has exactly one
+# authorized_keys entry and no other account has usable credentials), so
+# turning password auth off changes nothing about how anyone actually logs
+# in - it only removes online password guessing as an avenue. fail2ban
+# (roles/fail2ban) slows that down; this closes it.
+
+PasswordAuthentication no
+PermitRootLogin prohibit-password
+X11Forwarding no
+ClientAliveInterval 300
+ClientAliveCountMax 2

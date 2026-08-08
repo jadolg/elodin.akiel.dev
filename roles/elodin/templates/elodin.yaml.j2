@@ -1,0 +1,103 @@
+# Managed by Ansible (roles/elodin) - do not edit by hand.
+
+log:
+  level: {{ elodin_log_level }}
+  queries: false
+  file: ""
+
+server:
+  workers: 0
+  upstream_workers: 0
+  max_connections: 512
+  client_timeout: 10s
+  max_pending: 0
+
+  # DynamicUser in the systemd unit already drops root once the listeners
+  # are bound; there is nothing to name here.
+  user: ""
+  group: ""
+
+  allow_from: []
+
+  max_udp_response: 1232
+
+  rate_limit:
+    enabled: true
+    responses_per_second: 500
+    slip: 2
+
+listeners:
+  udp:
+    enabled: true
+    address: "0.0.0.0"
+    port: 53
+  tcp:
+    enabled: true
+    address: "0.0.0.0"
+    port: 53
+  dot:
+    enabled: true
+    address: "0.0.0.0"
+    port: 853
+    cert_file: {{ elodin_cert_dir }}/{{ elodin_domain }}.crt
+    key_file: {{ elodin_cert_dir }}/{{ elodin_domain }}.key
+  doh:
+    enabled: false
+    address: "0.0.0.0"
+    port: 443
+    path: /dns-query
+    cert_file: {{ elodin_cert_dir }}/{{ elodin_domain }}.crt
+    key_file: {{ elodin_cert_dir }}/{{ elodin_domain }}.key
+
+upstream:
+  strategy: failover
+  timeout: 5s
+  attempts: 2
+  max_idle: 8
+  idle_timeout: 30s
+  bootstrap: {{ elodin_upstream_bootstrap | to_json }}
+  servers:
+{% for s in elodin_upstream_servers %}
+    - name: {{ s.name }}
+      type: {{ s.type }}
+      address: {{ s.address }}
+      port: {{ s.port }}
+      hostname: {{ s.hostname }}
+{% endfor %}
+
+cache:
+  enabled: true
+  max_entries: 10000
+  max_bytes: 64MiB
+  min_ttl: 0
+  max_ttl: 24h
+  negative_ttl: 300
+  serve_stale: false
+
+blocking:
+  enabled: {{ 'true' if elodin_blocking_enabled else 'false' }}
+  response: nxdomain
+  custom_ipv4: 0.0.0.0
+  custom_ipv6: "::"
+  block_ttl: 60
+  refresh: 24h
+  cache_dir: /var/cache/elodin
+  lists:
+{% for l in elodin_blocklists %}
+    - name: {{ l.name }}
+      url: {{ l.url }}
+      format: {{ l.format }}
+{% endfor %}
+  allowlists: []
+  rules: []
+
+dnssec:
+  enabled: {{ 'true' if elodin_dnssec_enabled else 'false' }}
+  max_nsec3_iterations: 100
+
+cookies:
+  enabled: true
+  require: false
+  upstream: true
+
+rewrites: []

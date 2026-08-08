@@ -1,0 +1,174 @@
+---
+- name: Create the elodin-cert group (grants read access to the DoT cert/key)
+  ansible.builtin.group:
+    name: "{{ lego_cert_group }}"
+    system: true
+    state: present
+
+- name: Create the lego system group
+  ansible.builtin.group:
+    name: "{{ lego_group }}"
+    system: true
+    state: present
+
+- name: Create the lego system user
+  ansible.builtin.user:
+    name: "{{ lego_user }}"
+    group: "{{ lego_group }}"
+    system: true
+    create_home: false
+    home: "{{ lego_home }}"
+    shell: /usr/sbin/nologin
+
+# setgid so everything lego creates under here - including certificates/ and
+# the key/cert files inside it - inherits the elodin-cert group on its own,
+# with no chgrp needed later beyond the read-permission fix in the hook
+# script.
+- name: Create lego's home directory, setgid to elodin-cert
+  ansible.builtin.file:
+    path: "{{ lego_home }}"
+    state: directory
+    owner: "{{ lego_user }}"
+    group: "{{ lego_cert_group }}"
+    mode: "02710"
+
+- name: Download the lego release tarball
+  ansible.builtin.get_url:
+    url: "https://github.com/go-acme/lego/releases/download/v{{ lego_version }}/lego_v{{ lego_version }}_linux_amd64.tar.gz"
+    dest: "/usr/local/src/lego_v{{ lego_version }}_linux_amd64.tar.gz"
+    checksum: "{{ lego_checksum_linux_amd64 }}"
+    mode: "0644"
+
+- name: Extract the lego binary
+  ansible.builtin.unarchive:
+    src: "/usr/local/src/lego_v{{ lego_version }}_linux_amd64.tar.gz"
+    dest: /usr/local/src
+    remote_src: true
+    creates: /usr/local/src/lego
+
+- name: Install the lego binary
+  ansible.builtin.copy:
+    src: /usr/local/src/lego
+    dest: "{{ lego_bin_dir }}/lego"
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Let lego bind :80 without running as root
+  community.general.capabilities:
+    path: "{{ lego_bin_dir }}/lego"
+    capability: cap_net_bind_service+ep
+    state: present
+
+- name: Install the ACME HTTP-01 firewall helper
+  ansible.builtin.template:
+    src: elodin-acme-fw.sh.j2
+    dest: /usr/local/sbin/elodin-acme-fw.sh
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Install the post-issuance permissions hook
+  ansible.builtin.template:
+    src: elodin-cert-hook.sh.j2
+    dest: /usr/local/sbin/elodin-cert-hook.sh
+    owner: root
+    group: root
+    # 0755, not 0750: lego (running as the unprivileged "lego" user) execs
+    # this itself as its --deploy-hook subprocess, and the script does
+    # nothing but chmod files it can already reach - there's nothing in it
+    # worth restricting.
+    mode: "0755"
+
+- name: Install the lego-renew systemd service
+  ansible.builtin.template:
+    src: lego-renew.service.j2
+    dest: /etc/systemd/system/lego-renew.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Install the lego-force-renew systemd service (on demand, no timer)
+  ansible.builtin.template:
+    src: lego-force-renew.service.j2
+    dest: /etc/systemd/system/lego-force-renew.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Install the lego-renew systemd timer
+  ansible.builtin.template:
+    src: lego-renew.timer.j2
+    dest: /etc/systemd/system/lego-renew.timer
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Install the cert-change reload watcher (path unit)
+  ansible.builtin.template:
+    src: elodin-cert-reload.path.j2
+    dest: /etc/systemd/system/elodin-cert-reload.path
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Install the cert-change reload service
+  ansible.builtin.template:
+    src: elodin-cert-reload.service.j2
+    dest: /etc/systemd/system/elodin-cert-reload.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Flush handlers so the units above exist before they're used
+  ansible.builtin.meta: flush_handlers
+
+# "lego run" is get-or-renew in one command in lego v5 - it reads the stored
+# certificate itself and only touches the network (and needs :80) when
+# there isn't one yet or it's within --renew-days of expiry, so this is
+# exactly the command lego-renew.service runs daily. --deploy-hook only
+# fires when a certificate was actually created or renewed, which is what
+# sets its permissions for elodin below.
+- name: Obtain or renew the certificate (opens :80 only while lego needs it)
+  block:
+    - name: Open :80 for a possible HTTP-01 challenge
+      ansible.builtin.command: /usr/local/sbin/elodin-acme-fw.sh open
+      changed_when: true
+
+    - name: Run lego
+      ansible.builtin.command:
+        cmd: >-
+          {{ lego_bin_dir }}/lego
+          run
+          --accept-tos
+          --email {{ elodin_acme_email }}
+          --domains {{ elodin_domain }}
+          --path {{ lego_home }}
+          --http --http.address :80
+          --renew-days {{ lego_renew_days }}
+          --deploy-hook /usr/local/sbin/elodin-cert-hook.sh
+      become: true
+      become_user: "{{ lego_user }}"
+      changed_when: true
+  always:
+    - name: Close :80 again
+      ansible.builtin.command: /usr/local/sbin/elodin-acme-fw.sh close
+      changed_when: true
+
+- name: Enable the renewal timer
+  ansible.builtin.systemd:
+    name: lego-renew.timer
+    enabled: true
+    state: started
+
+- name: Enable the cert-change reload watcher
+  ansible.builtin.systemd:
+    name: elodin-cert-reload.path
+    enabled: true
+    state: started

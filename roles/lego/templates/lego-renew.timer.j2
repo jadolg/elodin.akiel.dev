@@ -1,0 +1,13 @@
+[Unit]
+Description=Periodically renew the Lego-issued certificate for {{ elodin_domain }}
+
+[Timer]
+# lego run --renew-days {{ lego_renew_days }} is cheap to run daily: it only
+# touches the network (and briefly opens :80) when the certificate is
+# actually within {{ lego_renew_days }} days of expiring.
+OnCalendar=daily
+RandomizedDelaySec=1h
+Persistent=true
+
+[Install]
+WantedBy=timers.target

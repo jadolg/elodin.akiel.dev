@@ -1,0 +1,30 @@
+# Managed by Ansible (roles/fail2ban) - do not edit by hand.
+#
+# roles/firewall is nftables-only, so banning has to go through nftables
+# too rather than fail2ban's default iptables-multiport, which would either
+# fight it or silently do nothing depending on how iptables-nft is set up
+# on this host. nftables-multiport bans into its own separate table
+# (f2b-table, hooked at a higher priority than roles/firewall's "inet
+# filter"), so the two never touch the same rules or need to know about
+# each other. blocktype=drop matches this deployment's firewall elsewhere:
+# silence rather than a rejection that confirms someone's listening.
+
+[DEFAULT]
+banaction = nftables-multiport[blocktype=drop]
+banaction_allports = nftables-allports[blocktype=drop]
+
+[sshd]
+enabled = true
+port = {{ elodin_ssh_port }}
+
+# A repeat offender - banned, waits it out, comes right back - gets banned
+# from every port for a week instead of just sshd's normal 10 minutes.
+# banaction_allports (defined above) is what makes "every port" correct:
+# recidive bans by source address regardless of which port they were
+# caught on, so limiting it to ssh alone would miss the point.
+[recidive]
+enabled = true
+logpath = /var/log/fail2ban.log
+banaction = %(banaction_allports)s
+bantime = 1w
+findtime = 1d

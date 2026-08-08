@@ -1,0 +1,31 @@
+[Unit]
+Description=Force-renew the Lego-issued certificate for {{ elodin_domain }}, whether or not it's due
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=1h
+StartLimitBurst=3
+
+[Service]
+Type=oneshot
+User={{ lego_user }}
+Group={{ lego_group }}
+
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths={{ lego_home }}
+
+ExecStartPre=+/usr/local/sbin/elodin-acme-fw.sh open
+ExecStopPost=+/usr/local/sbin/elodin-acme-fw.sh close
+
+# Same as lego-renew.service but --renew-force instead of --renew-days: gets
+# a brand new certificate regardless of how long the current one has left.
+# --no-random-sleep too: lego's default jitters a real renewal by up to a
+# few minutes to spread load on the CA across a fleet, which is right for
+# the timer-driven unit but wrong here - "force renew now" means now.
+# Not on a timer - started on demand (`mise run renew-cert`), so it has no
+# [Install] section.
+ExecStart={{ lego_bin_dir }}/lego run --accept-tos --email {{ elodin_acme_email }} --domains {{ elodin_domain }} --path {{ lego_home }} --http --http.address :80 --renew-force --no-random-sleep --deploy-hook /usr/local/sbin/elodin-cert-hook.sh

@@ -1,0 +1,4 @@
+all:
+  hosts:
+    elodin.akiel.dev:
+      ansible_user: root

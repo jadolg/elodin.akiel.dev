@@ -1,0 +1,14 @@
+[tools]
+ansible = { version = "latest", pipx_args = "--include-deps", uvx = "false" }
+
+[tasks.deploy]
+description = "Run the Ansible playbook against elodin.akiel.dev"
+run = "ansible-playbook playbook.yml"
+
+[tasks."renew-cert"]
+description = "Force-renew the DoT certificate now, whether or not it's due"
+run = "ssh root@elodin.akiel.dev 'systemctl start lego-force-renew.service; journalctl -u lego-force-renew.service -n 20 --no-pager'"
+
+[tasks.restart]
+description = "Restart the elodin service"
+run = "ssh root@elodin.akiel.dev 'systemctl restart elodin.service && systemctl status elodin.service --no-pager -l'"

@@ -1,0 +1,13 @@
+---
+- name: Deploy elodin as a public DoT resolver, certificates via Lego
+  hosts: elodin.akiel.dev
+  become: true
+  # Order matters: the firewall must exist before anything opens :80 for a
+  # moment, Lego must have issued a real certificate before elodin's DoT
+  # listener can start against it, so elodin goes last.
+  roles:
+    - firewall
+    - fail2ban
+    - hardening
+    - lego
+    - elodin
