@@ -9,5 +9,11 @@
     - firewall
     - fail2ban
     - hardening
-    - lego
-    - elodin
+    # never-tagged: system package upgrades only run when explicitly
+    # requested with --tags maintenance, never on a plain deploy.
+    - role: maintenance
+      tags: [maintenance, never]
+    - role: lego
+      tags: [maintenance]
+    - role: elodin
+      tags: [maintenance]

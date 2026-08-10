@@ -19,7 +19,7 @@
 - name: Install elodin
   ansible.builtin.apt:
     name: elodin
-    state: present
+    state: latest
     update_cache: true
 
 - name: Deploy elodin's configuration

@@ -1,0 +1,27 @@
+---
+- name: Update apt cache and upgrade all system packages
+  ansible.builtin.apt:
+    update_cache: true
+    upgrade: dist
+
+- name: Remove packages no longer required
+  ansible.builtin.apt:
+    autoremove: true
+
+- name: Clean up the local apt package cache
+  ansible.builtin.apt:
+    autoclean: true
+
+- name: Check whether a reboot is required
+  ansible.builtin.stat:
+    path: /var/run/reboot-required
+  register: elodin_reboot_required_file
+
+# elodin is a public DoT resolver - reboot on our own schedule, not
+# silently mid-maintenance-run, so this only warns.
+- name: Warn if a reboot is required
+  ansible.builtin.debug:
+    msg: >-
+      A reboot is required to finish applying updates
+      (see /var/run/reboot-required.pkgs on the host).
+  when: elodin_reboot_required_file.stat.exists
