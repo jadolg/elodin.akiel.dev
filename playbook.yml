@@ -17,3 +17,6 @@
       tags: [maintenance]
     - role: elodin
       tags: [maintenance]
+    - role: alloy
+      tags: [maintenance]
+      when: alloy_enabled

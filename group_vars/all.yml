@@ -57,3 +57,7 @@ lego_cert_group: elodin-cert
 
 elodin_cert_dir: "{{ lego_home }}/certificates"
 elodin_config_path: /etc/elodin/elodin.yaml
+
+alloy_enabled: true
+alloy_loki_url: "http://10.8.0.6:3100/loki/api/v1/push"
+alloy_external_labels: {}
