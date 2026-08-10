@@ -46,6 +46,14 @@ elodin_dnssec_enabled: true
 elodin_doh_enabled: true
 elodin_log_level: info
 
+# Loopback only: alloy scrapes from the same host, and the numbers describe
+# the network (query rates, block rates, upstream health) with nothing
+# authenticating in front of them.
+elodin_metrics_enabled: true
+elodin_metrics_address: "127.0.0.1"
+elodin_metrics_port: 9153
+elodin_metrics_path: /metrics
+
 lego_version: "5.3.1"
 lego_checksum_linux_amd64: "sha256:b3c71b122ee1947eacfe0b809b955647f6377239fe4bfc49f73b1a091ae1252a"
 lego_renew_days: 30
@@ -60,4 +68,6 @@ elodin_config_path: /etc/elodin/elodin.yaml
 
 alloy_enabled: true
 alloy_loki_url: "http://10.8.0.6:3100/loki/api/v1/push"
+alloy_prometheus_url: "http://10.8.0.6:9090/api/v1/write"
+alloy_scrape_interval: 30s
 alloy_external_labels: {}

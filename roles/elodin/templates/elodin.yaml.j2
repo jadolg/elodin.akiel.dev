@@ -49,6 +49,12 @@ listeners:
     cert_file: {{ elodin_cert_dir }}/{{ elodin_domain }}.crt
     key_file: {{ elodin_cert_dir }}/{{ elodin_domain }}.key
 
+metrics:
+  enabled: {{ 'true' if elodin_metrics_enabled else 'false' }}
+  address: "{{ elodin_metrics_address }}"
+  port: {{ elodin_metrics_port }}
+  path: {{ elodin_metrics_path }}
+
 upstream:
   strategy: failover
   timeout: 5s
