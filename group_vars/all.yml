@@ -41,6 +41,12 @@ elodin_blocklists:
   - name: 1hosts-lite
     url: https://raw.githubusercontent.com/badmojr/1Hosts/master/Lite/hosts.txt
     format: hosts
+  - name: spam404
+    url: https://raw.githubusercontent.com/Spam404/lists/master/main-blacklist.txt
+    format: domains
+  - name: nocoin
+    url: https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt
+    format: hosts
 
 elodin_dnssec_enabled: true
 elodin_doh_enabled: true
