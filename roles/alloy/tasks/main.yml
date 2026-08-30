@@ -1,4 +1,12 @@
 ---
+- name: Wait for elodin to resolve DNS again after its restart
+  ansible.builtin.command: getent hosts apt.grafana.com
+  changed_when: false
+  register: dns_check
+  until: dns_check.rc == 0
+  retries: 10
+  delay: 2
+
 - name: Add the Grafana apt repository (for alloy)
   ansible.builtin.deb822_repository:
     name: grafana
