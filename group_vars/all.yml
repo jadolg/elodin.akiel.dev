@@ -47,6 +47,12 @@ elodin_blocklists:
   - name: nocoin
     url: https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt
     format: hosts
+  - name: hagezi-tif-mini
+    url: https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/tif.mini.txt
+    format: adblock
+  - name: hagezi-doh
+    url: https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/doh.txt
+    format: adblock
 
 elodin_dnssec_enabled: true
 elodin_doh_enabled: true
