@@ -2,7 +2,7 @@
 
 log:
   level: {{ elodin_log_level }}
-  queries: false
+  queries: {{ 'true' if elodin_log_queries else 'false' }}
   file: ""
 
 server:

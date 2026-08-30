@@ -57,6 +57,7 @@ elodin_blocklists:
 elodin_dnssec_enabled: true
 elodin_doh_enabled: true
 elodin_log_level: info
+elodin_log_queries: true
 
 # Loopback only: alloy scrapes from the same host, and the numbers describe
 # the network (query rates, block rates, upstream health) with nothing
