@@ -19,6 +19,10 @@ server:
 
   allow_from: []
 
+  # Public resolver: bound per source prefix so one stranger holding idle
+  # TCP/DoT/DoH connections can't fill the whole connection table.
+  max_connections_per_prefix: 24
+
   max_udp_response: 1232
 
   rate_limit:
@@ -105,5 +109,20 @@ cookies:
   enabled: true
   require: false
   upstream: true
+
+# Off by default upstream; a public resolver has every reason to refuse an
+# upstream answer that points a public name into private address space
+# (rebinding attacks) and to be authoritative for reserved names that only
+# make sense on someone else's private network.
+rebind:
+  enabled: true
+  allow_loopback: false
+
+special_use:
+  enabled: true
+  onion: true
+  local: true
+  test: true
+  home_arpa: true
 
 rewrites: []
