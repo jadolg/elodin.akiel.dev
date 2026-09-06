@@ -53,6 +53,9 @@ elodin_blocklists:
   - name: hagezi-doh
     url: https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/doh.txt
     format: adblock
+  - name: shadow-blocker-session-replay
+    url: https://raw.githubusercontent.com/CorleoneSalute/SHADOW-BLOCKER-BLOCKLIST/refs/heads/main/dist/basic/hosts/Session-Replay-Heatmap.txt
+    format: hosts
 
 elodin_dnssec_enabled: true
 elodin_doh_enabled: true
