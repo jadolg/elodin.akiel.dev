@@ -16,3 +16,11 @@ run = "ssh root@elodin.akiel.dev 'systemctl start lego-force-renew.service; jour
 [tasks.restart]
 description = "Restart the elodin service"
 run = "ssh root@elodin.akiel.dev 'systemctl restart elodin.service && systemctl status elodin.service --no-pager -l'"
+
+[tasks.check]
+description = "Offline validation: inventory/vars parse, playbook and every role resolve"
+run = [
+  "ansible-inventory --list --output /dev/null",
+  "ansible-playbook playbook.yml --syntax-check",
+  "ansible-playbook playbook.yml --syntax-check --tags maintenance",
+]
