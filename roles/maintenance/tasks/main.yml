@@ -17,11 +17,17 @@
     path: /var/run/reboot-required
   register: elodin_reboot_required_file
 
-# elodin is a public DoT resolver - reboot on our own schedule, not
-# silently mid-maintenance-run, so this only warns.
-- name: Warn if a reboot is required
-  ansible.builtin.debug:
-    msg: >-
-      A reboot is required to finish applying updates
-      (see /var/run/reboot-required.pkgs on the host).
+# A pending reboot means the running kernel or libc is not the patched one,
+# so finish the job here: maintenance already runs on a schedule chosen for
+# the quiet hours, and the resolver is back within a minute.
+- name: Reboot to finish applying updates
+  ansible.builtin.reboot:
+    msg: Rebooting to finish applying package updates
+    reboot_timeout: 600
+  when: elodin_reboot_required_file.stat.exists
+
+- name: Wait for the DoT listener to answer again
+  ansible.builtin.wait_for:
+    port: 853
+    timeout: 120
   when: elodin_reboot_required_file.stat.exists
