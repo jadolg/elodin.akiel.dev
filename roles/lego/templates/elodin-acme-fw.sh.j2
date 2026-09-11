@@ -5,15 +5,27 @@ set -eu
 comment="acme-http01-temp"
 
 case "${1:-}" in
+  # Both halves cope with a rule that is already there. Two opens can stack -
+  # an Ansible deploy while lego-renew.timer is mid-run, the GitHub Actions
+  # concurrency group not being a lock the box knows about - and before this
+  # was idempotent, the close that followed collected both handles into one
+  # word, ran `nft delete rule ... handle "7 9"`, failed, and left :80 open
+  # for good under `set -e`. Nothing listens on 80 between challenges, so that
+  # was a quiet failure rather than a loud one, which is the argument for
+  # fixing it rather than noticing it later.
   open)
-    nft add rule inet filter input tcp dport 80 accept comment \"$comment\"
+    if ! nft -a list chain inet filter input 2>/dev/null | grep -q "$comment"; then
+      nft add rule inet filter input tcp dport 80 accept comment \"$comment\"
+    fi
     ;;
   close)
-    handle=$(nft -a list chain inet filter input 2>/dev/null \
-      | awk -v c="$comment" 'index($0, c) {print $NF}')
-    if [ -n "$handle" ]; then
-      nft delete rule inet filter input handle "$handle"
-    fi
+    # One delete per handle. Handles are stable identifiers, not positions, so
+    # deleting one does not renumber the others and the order does not matter.
+    nft -a list chain inet filter input 2>/dev/null \
+      | awk -v c="$comment" 'index($0, c) {print $NF}' \
+      | while read -r handle; do
+          nft delete rule inet filter input handle "$handle"
+        done
     ;;
   *)
     echo "usage: $0 {open|close}" >&2

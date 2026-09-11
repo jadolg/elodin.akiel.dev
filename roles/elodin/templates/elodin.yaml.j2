@@ -8,7 +8,18 @@ log:
 server:
   workers: 0
   upstream_workers: 0
-  max_connections: 512
+  # The table, and one client's share of it. 1,024 threads and descriptors,
+  # inside the packaged unit's LimitNOFILE=8192 and sized for this box's 1 GB
+  # rather than for examples/public.yaml's 2,048.
+  #
+  # The share is the figure that matters here. At the old 512/50 a stranger
+  # filled the whole table out of 11 prefixes, and an IPv6 /48 - a routine
+  # allocation - is 65,536 of them; at 1,024/24 the same attack costs 43. That
+  # is cost rather than impossibility, which is why the firewall now carries a
+  # per-source connection limit of its own (roles/firewall). 24 is what
+  # examples/public.yaml recommends: a real client holds one connection per
+  # device and reuses it, so this is ample for anybody legitimate.
+  max_connections: 1024
   client_timeout: 10s
   max_pending: 0
 
@@ -21,7 +32,7 @@ server:
 
   # Public resolver: bound per source prefix so one stranger holding idle
   # TCP/DoT/DoH connections can't fill the whole connection table.
-  max_connections_per_prefix: 50
+  max_connections_per_prefix: 24
 
   max_udp_response: 1232
 
@@ -31,13 +42,22 @@ server:
     slip: 2
 
 listeners:
+  # Plain DNS, for this host alone: the package's systemd-resolved takeover
+  # writes "nameserver 127.0.0.1" into /etc/resolv.conf, and that is the only
+  # client these two have. They bound "::" before, which made roles/firewall
+  # the single thing standing between server.allow_from's empty list and an
+  # open resolver on :53 - one ruleset that fails to load at boot, one ufw
+  # re-enabled by a package, and this box amplifies for whoever finds it,
+  # within hours. Binding loopback means a firewall that lapses exposes
+  # nothing here. The firewall still drops 53 from everywhere: two
+  # independent reasons this port is not public, neither relying on the other.
   udp:
     enabled: true
-    address: "::"
+    address: "127.0.0.1"
     port: 53
   tcp:
     enabled: true
-    address: "::"
+    address: "127.0.0.1"
     port: 53
   dot:
     enabled: true
@@ -63,7 +83,10 @@ upstream:
   strategy: failover
   timeout: 5s
   attempts: 2
-  max_idle: 8
+  # 32 rather than the shipped 8: every cache miss wants a pooled connection,
+  # and a miss that finds none pays a fresh TLS handshake to Cloudflare or
+  # Quad9 before it can even ask.
+  max_idle: 32
   idle_timeout: 30s
   bootstrap: {{ elodin_upstream_bootstrap | to_json }}
   servers:
@@ -77,12 +100,24 @@ upstream:
 
 cache:
   enabled: true
-  max_entries: 10000
-  max_bytes: 64MiB
+  # Sized for a public resolver's tail - many strangers asking many different
+  # names - within this box's 1 GB. At the measured ~463 bytes an entry,
+  # 200,000 answers is about 90 MB, which is what max_bytes is set beside;
+  # the blocklists below are the other ~100 MB at ~129 bytes a rule.
+  #
+  # The old 10,000 was the term a random-subdomain flood attacked: a few
+  # seconds of made-up names under a real domain evicted everything worth
+  # keeping, and every real query behind it became an upstream query. Breadth
+  # is what keeps the hit rate up and the flood off the upstreams.
+  max_entries: 200000
+  max_bytes: 96MiB
   min_ttl: 0
   max_ttl: 24h
   negative_ttl: 300
-  serve_stale: false
+  # On (RFC 8767): an upstream that goes away must not take every client's
+  # resolution with it. An expired entry is served only after the refresh has
+  # failed, with a short TTL so the client comes back.
+  serve_stale: true
 
 blocking:
   enabled: {{ 'true' if elodin_blocking_enabled else 'false' }}
