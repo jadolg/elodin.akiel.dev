@@ -3,14 +3,21 @@
 #
 # Steady state: only SSH, DNS-over-TLS (853) and DNS-over-HTTPS (443) are
 # reachable from the internet, over IPv4 and IPv6 alike - this table is
-# `inet`, so every rule below covers both. Plain DNS (53) is bound to `::`
-# (dual-stack) by elodin but only usable locally because this ruleset drops
-# it from anywhere else
-# - elodin's own server.allow_from is deliberately public (see
-# roles/elodin), so this is the actual boundary, not that setting. Port 80
-# does not appear here at all: roles/lego opens it for a few seconds at a
-# time, only while Lego is proving an HTTP-01 challenge, and always closes
-# it again afterwards.
+# `inet`, so every rule below covers both. The two DNS ports additionally
+# carry a per-source connection limit; the comment above those rules is what
+# it bounds, what it costs an attacker, and where it stops helping.
+#
+# Plain DNS (53) is bound to 127.0.0.1 by elodin (roles/elodin) as well as
+# dropped from everywhere but this host by the policy below. It used to be
+# bound to `::` and kept off the internet by this ruleset alone, which made
+# one file the only thing between server.allow_from's deliberately empty
+# list and an open resolver - a ruleset that fails to load at boot, or a ufw
+# a package re-enables, and the box amplifies for whoever scans it first.
+# Two independent reasons now, so that neither of them is the only one.
+#
+# Port 80 does not appear here at all: roles/lego opens it for a few seconds
+# at a time, only while Lego is proving an HTTP-01 challenge, and always
+# closes it again afterwards.
 
 flush ruleset
 
@@ -26,6 +33,62 @@ table inet filter {
         icmpv6 type { echo-request, echo-reply, destination-unreachable, packet-too-big, time-exceeded, parameter-problem, nd-router-solicit, nd-router-advert, nd-neighbor-solicit, nd-neighbor-advert } accept
 
         tcp dport {{ elodin_ssh_port }} accept comment "ssh management"
+
+        # A per-source bound on the two public ports, in front of the ones
+        # elodin keeps for itself. Not instead of them: everything elodin
+        # bounds it bounds per /24 and per /64, because that is the
+        # granularity an attacker picks addresses within, so an actor with
+        # addresses in n prefixes has n copies of every figure it enforces -
+        # and on IPv6 a routine allocation from a hosting provider or a
+        # tunnel broker is a /48, which is 65,536 /64s. Refusing here is also
+        # cheaper than refusing there: elodin's own arrival budget held a
+        # 32-dialer flood to 462 handshakes a second and 0.29 of four cores,
+        # but the flood's dial rate rose to 25,129 a second precisely because
+        # being refused had become cheap. A SYN dropped in the kernel costs
+        # neither a thread nor a TLS handshake.
+        #
+        # Two different bounds, both measured in a pair of network namespaces
+        # before this was written:
+        #
+        #   1. How many connections one source may hold at once. 40 dials
+        #      from one address established 24 and had the other 16 dropped.
+        #      Only connections that came through this rule are counted, so
+        #      an ssh session from the same address does not spend the
+        #      budget - 30 concurrent on :22 alongside the 24 here, none
+        #      refused. This one refuses outright.
+        #   2. How fast one source may open them. This throttles rather than
+        #      refuses: a dropped SYN is one the client retransmits after a
+        #      backoff, so 200 dials from one address went from 30 ms to 18.9
+        #      seconds - 6,600 a second down to 10.6, which is the figure
+        #      configured. That is the shape wanted against a handshake
+        #      flood, and it is why these counters stay small while the
+        #      effect is large.
+        #
+        # Keyed per address on IPv4 and per /64 on IPv6 - the unit an
+        # attacker picks freely within, and the unit elodin accounts in, so
+        # the two layers agree about who a client is. `ct state new` means an
+        # established connection never reaches these rules. ssh is
+        # deliberately not covered: fail2ban watches that port, and a limiter
+        # here is a way to lock yourself out of the box. Order matters -
+        # these sit in front of the accepts below.
+        #
+        # The meters are dynamic sets of 65,535 elements. A flood spread over
+        # more sources than that fills them, after which new elements fail
+        # and the packet falls through to the accept below rather than being
+        # dropped: fail-open, which is the right way round for a resolver,
+        # and the point at which this stops being the layer that helps.
+        tcp dport { 853, 443 } ct state new meter dns_conns_v4 size 65535 \
+            { ip saddr ct count over {{ elodin_conn_limit_per_source }} } \
+            counter drop comment "concurrent DoT/DoH per source (v4)"
+        tcp dport { 853, 443 } ct state new meter dns_conns_v6 size 65535 \
+            { ip6 saddr and ffff:ffff:ffff:ffff:: ct count over {{ elodin_conn_limit_per_source }} } \
+            counter drop comment "concurrent DoT/DoH per /64 (v6)"
+        tcp dport { 853, 443 } ct state new meter dns_rate_v4 size 65535 \
+            { ip saddr timeout 1m limit rate over {{ elodin_conn_rate_per_second }}/second burst {{ elodin_conn_rate_burst }} packets } \
+            counter drop comment "new DoT/DoH per second per source (v4)"
+        tcp dport { 853, 443 } ct state new meter dns_rate_v6 size 65535 \
+            { ip6 saddr and ffff:ffff:ffff:ffff:: timeout 1m limit rate over {{ elodin_conn_rate_per_second }}/second burst {{ elodin_conn_rate_burst }} packets } \
+            counter drop comment "new DoT/DoH per second per /64 (v6)"
 
         tcp dport 853 accept comment "DNS-over-TLS (public)"
         tcp dport 443 accept comment "DNS-over-HTTPS (public)"
