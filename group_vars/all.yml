@@ -3,6 +3,10 @@ elodin_domain: elodin.akiel.dev
 elodin_acme_email: diazorozcoj@gmail.com
 elodin_ssh_port: 22
 
+# Empty means whatever the apt repository currently offers. Set it to a
+# package version ("0.4.2-1") to pin, including downgrades.
+elodin_version: ""
+
 elodin_apt_gpg_key_url: "https://deb.akiel.dev/gpg.pub.key"
 
 elodin_upstream_servers:

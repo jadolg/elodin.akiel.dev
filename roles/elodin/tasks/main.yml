@@ -18,8 +18,9 @@
 
 - name: Install elodin
   ansible.builtin.apt:
-    name: elodin
-    state: latest
+    name: "elodin{{ ('=' + elodin_version) if elodin_version else '' }}"
+    state: "{{ 'present' if elodin_version else 'latest' }}"
+    allow_downgrade: "{{ elodin_version | length > 0 }}"
     update_cache: true
 
 - name: Deploy elodin's configuration

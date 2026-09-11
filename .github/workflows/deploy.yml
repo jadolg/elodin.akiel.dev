@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      elodin_version:
+        description: "elodin package version to install (empty = latest)"
+        required: false
+        default: ""
 
 concurrency:
   group: deploy
@@ -25,4 +30,11 @@ jobs:
 
       - uses: jdx/mise-action@v2
 
-      - run: mise run deploy
+      - env:
+          ELODIN_VERSION: ${{ inputs.elodin_version }}
+        run: |
+          if [ -n "$ELODIN_VERSION" ]; then
+            mise run deploy --extra-vars "elodin_version=$ELODIN_VERSION"
+          else
+            mise run deploy
+          fi
