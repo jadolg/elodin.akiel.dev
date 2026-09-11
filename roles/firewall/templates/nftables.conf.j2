@@ -2,8 +2,10 @@
 # Managed by Ansible (roles/firewall) - do not edit by hand.
 #
 # Steady state: only SSH, DNS-over-TLS (853) and DNS-over-HTTPS (443) are
-# reachable from the internet. Plain DNS (53) is bound to 0.0.0.0 by elodin
-# but only usable locally because this ruleset drops it from anywhere else
+# reachable from the internet, over IPv4 and IPv6 alike - this table is
+# `inet`, so every rule below covers both. Plain DNS (53) is bound to `::`
+# (dual-stack) by elodin but only usable locally because this ruleset drops
+# it from anywhere else
 # - elodin's own server.allow_from is deliberately public (see
 # roles/elodin), so this is the actual boundary, not that setting. Port 80
 # does not appear here at all: roles/lego opens it for a few seconds at a

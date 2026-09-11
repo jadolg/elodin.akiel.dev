@@ -33,21 +33,21 @@ server:
 listeners:
   udp:
     enabled: true
-    address: "0.0.0.0"
+    address: "::"
     port: 53
   tcp:
     enabled: true
-    address: "0.0.0.0"
+    address: "::"
     port: 53
   dot:
     enabled: true
-    address: "0.0.0.0"
+    address: "::"
     port: 853
     cert_file: {{ elodin_cert_dir }}/{{ elodin_domain }}.crt
     key_file: {{ elodin_cert_dir }}/{{ elodin_domain }}.key
   doh:
     enabled: {{ 'true' if elodin_doh_enabled else 'false' }}
-    address: "0.0.0.0"
+    address: "::"
     port: 443
     path: /dns-query
     cert_file: {{ elodin_cert_dir }}/{{ elodin_domain }}.crt
