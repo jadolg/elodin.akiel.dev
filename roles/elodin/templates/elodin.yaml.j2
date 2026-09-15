@@ -135,6 +135,9 @@ blocking:
 {% endfor %}
   allowlists: []
   rules: []
+  # Names that outrank every blocklist, whatever the lists say (the @@ prefix is
+  # implied). Driven by elodin_allow in group_vars.
+  allow: {{ elodin_allow | to_json }}
 
 dnssec:
   enabled: {{ 'true' if elodin_dnssec_enabled else 'false' }}

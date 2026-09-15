@@ -72,6 +72,13 @@ elodin_blocklists:
     url: https://raw.githubusercontent.com/CorleoneSalute/SHADOW-BLOCKER-BLOCKLIST/refs/heads/main/dist/basic/hosts/Session-Replay-Heatmap.txt
     format: hosts
 
+# Names exempted from the blocklists above, whatever those lists say. Each entry
+# is an adblock allow rule for one name (the @@ prefix is implied), and outranks
+# every blocklist. akieldev.sentry.io is our own Sentry - the tracker and
+# session-replay lists catch it, and we want our own error reports through.
+elodin_allow:
+  - "||akieldev.sentry.io^"
+
 elodin_dnssec_enabled: true
 elodin_doh_enabled: true
 elodin_log_level: info
