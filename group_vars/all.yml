@@ -73,13 +73,21 @@ elodin_blocklists:
     format: hosts
 
 # Names exempted from the blocklists above, whatever those lists say. Each entry
-# is an adblock allow rule for one name (the @@ prefix is implied), and outranks
-# every blocklist. ||sentry.io^ covers the domain and every subdomain: the
-# tracker and session-replay lists catch sentry.io, but logging in and using our
-# own Sentry needs its auth, API and asset hosts across the domain, not just the
-# one project subdomain.
+# is an adblock allow rule for one name (the @@ prefix is implied), matching the
+# domain and every subdomain, and outranks every blocklist.
+#
+# Sentry: the tracker and session-replay lists catch these, but logging in and
+# using our own Sentry needs all three - sentry.io (app, auth, API),
+# getsentry.net (ingest/backend), and sentry-cdn.com (the JS SDK's CDN).
+#
+# analytics.google.com is the Google Analytics admin console. Only the admin UI
+# is exempted here; the collection endpoints the lists exist to catch
+# (google-analytics.com, googletagmanager.com) stay blocked.
 elodin_allow:
   - "||sentry.io^"
+  - "||getsentry.net^"
+  - "||sentry-cdn.com^"
+  - "||analytics.google.com^"
 
 elodin_dnssec_enabled: true
 elodin_doh_enabled: true
