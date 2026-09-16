@@ -1,5 +1,6 @@
 [tools]
-ansible = { version = "latest", pipx_args = "--include-deps", uvx = "false" }
+uv = "latest"
+ansible = "latest"
 
 [tasks.deploy]
 description = "Run the Ansible playbook against elodin.akiel.dev"
