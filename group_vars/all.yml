@@ -74,10 +74,12 @@ elodin_blocklists:
 
 # Names exempted from the blocklists above, whatever those lists say. Each entry
 # is an adblock allow rule for one name (the @@ prefix is implied), and outranks
-# every blocklist. akieldev.sentry.io is our own Sentry - the tracker and
-# session-replay lists catch it, and we want our own error reports through.
+# every blocklist. ||sentry.io^ covers the domain and every subdomain: the
+# tracker and session-replay lists catch sentry.io, but logging in and using our
+# own Sentry needs its auth, API and asset hosts across the domain, not just the
+# one project subdomain.
 elodin_allow:
-  - "||akieldev.sentry.io^"
+  - "||sentry.io^"
 
 elodin_dnssec_enabled: true
 elodin_doh_enabled: true
