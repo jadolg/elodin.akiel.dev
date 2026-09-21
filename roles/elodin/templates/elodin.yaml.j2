@@ -83,10 +83,19 @@ upstream:
   strategy: failover
   timeout: 5s
   attempts: 2
-  # 32 rather than the shipped 8: every cache miss wants a pooled connection,
-  # and a miss that finds none pays a fresh TLS handshake to Cloudflare or
-  # Quad9 before it can even ask.
-  max_idle: 32
+  # 16, down from 32, because 32 was buying handshakes at the price of
+  # failures. Every idle connection held is an open connection at the far end,
+  # and Quad9 refuses a source that holds too many - measured from one host,
+  # refusals begin somewhere around 13 to 25 concurrent. The refusal arrives
+  # after the TLS handshake rather than at it: elodin connects, handshakes,
+  # sends the query, and the far side hangs up, which is the io_error that was
+  # elodin_upstream_failure_kind_total's only series for quad9-dot while this
+  # sat at 32. Cloudflare never once refused under the same setting.
+  #
+  # Raising this to avoid a handshake is still the right instinct, and 8 was
+  # too few for a cache-miss rate like this one's. 16 is the compromise being
+  # tested; watch the failure-by-kind panel before moving it either way.
+  max_idle: 16
   idle_timeout: 30s
   bootstrap: {{ elodin_upstream_bootstrap | to_json }}
   servers:
