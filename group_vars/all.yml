@@ -21,16 +21,16 @@ elodin_version: ""
 elodin_apt_gpg_key_url: "https://deb.akiel.dev/gpg.pub.key"
 
 elodin_upstream_servers:
-  - name: cloudflare-dot
-    type: tls
-    address: 1.1.1.1
-    port: 853
-    hostname: cloudflare-dns.com
   - name: quad9-dot
     type: tls
     address: 9.9.9.9
     port: 853
     hostname: dns.quad9.net
+  - name: cloudflare-dot
+    type: tls
+    address: 1.1.1.1
+    port: 853
+    hostname: cloudflare-dns.com
 
 elodin_upstream_bootstrap:
   - 1.1.1.1
