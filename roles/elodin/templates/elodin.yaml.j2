@@ -96,23 +96,26 @@ upstream:
   # too few for a cache-miss rate like this one's. 16 is the compromise being
   # tested; watch the failure-by-kind panel before moving it either way.
   max_idle: 16
-  # 8s, down from 30s, because 30 was longer than either upstream keeps a
-  # connection. Probed by idling an open DoT session and then reusing it:
-  # Quad9 had closed it somewhere between 10s and 15s, Cloudflare between 5s
-  # and 10s. Neither advertises edns-tcp-keepalive (RFC 7828), which is the
-  # mechanism that would have told us instead of a stopwatch, so this is a
-  # measured guess and both numbers are ranges from one host.
+  # 30s, and left there after 8s was tried and measured worse.
   #
-  # At 30s the pool handed out connections the far side had already dropped.
-  # `exchange_dot` retries those on a fresh one and does not count them, so
-  # they were never visible as failures - what they cost is a wasted round
-  # trip and a handshake on a large share of cache misses.
+  # Both upstreams close a connection well inside this: probed by idling an
+  # open DoT session and reusing it, Quad9 had closed between 10s and 15s and
+  # Cloudflare between 5s and 10s. Neither advertises edns-tcp-keepalive
+  # (RFC 7828), so there is nothing to learn the real figure from.
   #
-  # 8s is under Quad9's floor. It is inside Cloudflare's 5-10s window rather
-  # than under it, so some Cloudflare reuse may still land on a closed
-  # connection; that upstream has never failed here, so it is not worth
-  # chasing the last few seconds for.
-  idle_timeout: 8s
+  # The obvious conclusion - hold them for less than the peer does - is wrong,
+  # and cost 3.8% of quad9-dot exchanges becoming 6.0%. What matters is not
+  # whether a pooled connection is alive when handed out, but how often an
+  # exchange needs a *fresh* one, because Quad9 refuses 20-38% of fresh DoT
+  # connections (measured across 9.9.9.9, 149.112.112.112, 9.9.9.11 and
+  # 9.9.9.10; Cloudflare refused 0 of 240). At 8s a connection 8-12s old was
+  # thrown away while still usable, and every one of those became another
+  # fresh connection and another refusal to roll for.
+  #
+  # Too long only costs a wasted round trip: `exchange_dot` finds the corpse,
+  # retries on a fresh connection and does not count it. Too short costs
+  # failures. So err long.
+  idle_timeout: 30s
   bootstrap: {{ elodin_upstream_bootstrap | to_json }}
   servers:
 {% for s in elodin_upstream_servers %}
