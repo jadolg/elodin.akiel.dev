@@ -31,10 +31,16 @@ elodin_upstream_servers:
     address: 9.9.9.9
     port: 853
     hostname: dns.quad9.net
+  - name: google-dot
+    type: tls
+    address: 8.8.8.8
+    port: 853
+    hostname: dns.google
 
 elodin_upstream_bootstrap:
   - 1.1.1.1
   - 9.9.9.9
+  - 8.8.8.8
 
 elodin_blocking_enabled: true
 elodin_blocklists:
