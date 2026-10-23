@@ -53,3 +53,26 @@
     group: root
     mode: "0644"
   notify: Restart systemd-journald
+
+- name: Create apt-daily-upgrade.timer's drop-in directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/apt-daily-upgrade.timer.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+# Upgrades restart elodin via needrestart, so run them at night for the
+# users rather than at the stock 06:00 UTC + up to an hour of jitter.
+- name: Schedule unattended upgrades for 03:00 Berlin time
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/apt-daily-upgrade.timer.d/override.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      [Timer]
+      OnCalendar=
+      OnCalendar=*-*-* 03:00 Europe/Berlin
+      RandomizedDelaySec=0
+  notify: Restart apt-daily-upgrade.timer

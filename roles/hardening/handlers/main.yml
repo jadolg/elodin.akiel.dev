@@ -12,3 +12,9 @@
   ansible.builtin.systemd:
     name: systemd-journald
     state: restarted
+
+- name: Restart apt-daily-upgrade.timer
+  ansible.builtin.systemd:
+    name: apt-daily-upgrade.timer
+    state: restarted
+    daemon_reload: true
