@@ -6,7 +6,7 @@ elodin_ssh_port: 22
 # The firewall's per-source bound on 853 and 443 (roles/firewall). 24
 # concurrent connections is what server.max_connections_per_prefix gives one
 # prefix in roles/elodin, so a single address is refused by the kernel before
-# elodin has to spend a thread and a TLS handshake refusing it; the /24 or /64
+# elodin has to spend a fiber and a TLS handshake refusing it; the /24 or /64
 # aggregate is still elodin's to enforce. 10 new connections a second with a
 # burst of 20 is far above a real client - one connection per device, reused -
 # and far below what a handshake flood needs to be worth running.
