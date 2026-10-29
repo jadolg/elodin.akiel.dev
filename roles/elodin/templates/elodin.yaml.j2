@@ -6,11 +6,10 @@ log:
   file: ""
 
 server:
-  workers: 0
-  upstream_workers: 0
-  # The table, and one client's share of it. 1,024 threads and descriptors,
-  # inside the packaged unit's LimitNOFILE=8192 and sized for this box's 1 GB
-  # rather than for examples/public.yaml's 2,048.
+  # The table, and one client's share of it. 1,024 connections, each a fiber
+  # (about 72 KB held with its TLS session, so ~74 MB with the table full) and
+  # a descriptor, inside the packaged unit's LimitNOFILE=65536 and sized for
+  # this box's 1 GB rather than for examples/public.yaml's 2,048.
   #
   # The share is the figure that matters here. At the old 512/50 a stranger
   # filled the whole table out of 11 prefixes, and an IPv6 /48 - a routine
@@ -21,6 +20,11 @@ server:
   # device and reuses it, so this is ample for anybody legitimate.
   max_connections: 1024
   client_timeout: 10s
+  # Queries in flight, left to derive: 409 on this 1 GB box. A query waiting
+  # on an upstream holds no thread, so that is ~20,000 misses a second against
+  # a 20 ms upstream. Past it a datagram is dropped and a DoH/2 request gets a
+  # 503; set a number only when elodin_queries_inflight against
+  # elodin_queries_inflight_max says so.
   max_pending: 0
 
   # DynamicUser in the systemd unit already drops root once the listeners

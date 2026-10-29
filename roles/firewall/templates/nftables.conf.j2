@@ -45,7 +45,7 @@ table inet filter {
         # 32-dialer flood to 462 handshakes a second and 0.29 of four cores,
         # but the flood's dial rate rose to 25,129 a second precisely because
         # being refused had become cheap. A SYN dropped in the kernel costs
-        # neither a thread nor a TLS handshake.
+        # neither a fiber nor a TLS handshake.
         #
         # Two different bounds, both measured in a pair of network namespaces
         # before this was written:
